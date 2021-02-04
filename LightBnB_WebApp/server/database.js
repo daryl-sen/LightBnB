@@ -133,7 +133,7 @@ const getAllProperties = function(options, limit = 10) {
   let queryParams = [];
   let queryString = `SELECT properties.*, AVG(property_reviews.rating) AS average_rating
   FROM properties
-  JOIN property_reviews ON property_reviews.property_id = properties.id\n`;
+  LEFT OUTER JOIN property_reviews ON property_reviews.property_id = properties.id\n`;
 
   // START DYNAMIC QUERY
   if (options.owner_id) {
@@ -172,7 +172,7 @@ const getAllProperties = function(options, limit = 10) {
 
   limit = 10;
   queryParams.push(limit);
-  queryString += `LIMIT $${queryParams.length};`;
+  queryString += `ORDER BY properties.id DESC\nLIMIT $${queryParams.length};`;
   
   printQuery(queryString, queryParams);
   
