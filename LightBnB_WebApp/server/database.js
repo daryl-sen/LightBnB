@@ -100,12 +100,48 @@ exports.getAllReservations = getAllReservations;
  */
 
 const getAllProperties = function(options, limit = 10) {
+
+  let modifications = false;
+  const checkModifications = function(status) {
+    if (status) {
+      return 'AND';
+    } else {
+      return 'WHERE';
+    }
+  }
+
+  let queryParams = [];
+  let queryString = `SELECT * FROM properties\n`;
+
+  // START DYNAMIC QUERY
+  if (options.owner_id) {
+    queryParams.push(options.owner_id);
+    queryString += `${checkModifications(modifications)} city LIKE $${queryParams.length}\n`;
+    modifications = true;
+  }
+
+  if (options.minimum_price_per_night) {
+    queryParams.push(options.minimum_price_per_night);
+    queryString += `${checkModifications(modifications)} cost_per_night > $${queryParams.length}\n`;
+    modifications = true;
+  }
+
+  if (options.maximum_price_per_night) {
+    queryParams.push(options.maximum_price_per_night);
+    queryString += `${checkModifications(modifications)} cost_per_night < $${queryParams.length}\n`;
+    modifications = true;
+  }
+
+  
+  // END DYNAMIC QUERY
+  queryParams.push(limit);
+  queryString += `LIMIT $${queryParams.length};`;
+  
+  console.log(`query: '${queryString}'`);
   limit = 10;
-  return pool.query(`
-  SELECT * FROM properties
-  LIMIT $1
-  `, [limit])
+  return pool.query(queryString, queryParams)
   .then((res) => {
+    console.log(`count: ${res.rowCount}\n`);
     return res.rows;
   });
 }
