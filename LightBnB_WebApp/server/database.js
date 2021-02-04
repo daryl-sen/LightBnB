@@ -109,15 +109,18 @@ const checkModifications = function(modified) {
   }
 }
 
+// for debugging only
 const printQuery = function(queryString, queryParams) {
-  // for debugging only
-  
   let newString = queryString;
   let varCount = 0;
-
   while (newString.includes('$')) {
+    console.log('running');
     varCount++;
-    newString = queryString.replace(`$${varCount}`, queryParams[varCount - 1]);
+    if (typeof(queryParams[varCount - 1]) === 'number') {
+      newString = newString.replace(`$${varCount}`, queryParams[varCount - 1]);
+    } else {
+      newString = newString.replace(`$${varCount}`, `'${queryParams[varCount - 1]}'`);
+    }
   }
   // PRINT THE QUERY
   console.log('------------------------ QUERY START');
@@ -135,43 +138,42 @@ const getAllProperties = function(options, limit = 10) {
   // START DYNAMIC QUERY
   if (options.owner_id) {
     queryParams.push(options.owner_id);
-    queryString += `  ${checkModifications(modifications)} owner_id = $${queryParams.length}\n`;
+    queryString += `${checkModifications(modifications)} owner_id = $${queryParams.length}\n`;
     modifications = true;
   }
 
   if (options.minimum_price_per_night) {
     queryParams.push(options.minimum_price_per_night);
-    queryString += `  ${checkModifications(modifications)} cost_per_night > $${queryParams.length}\n`;
+    queryString += `${checkModifications(modifications)} cost_per_night >= $${queryParams.length}\n`;
     modifications = true;
   }
 
   if (options.maximum_price_per_night) {
     queryParams.push(options.maximum_price_per_night);
-    queryString += `  ${checkModifications(modifications)} cost_per_night < $${queryParams.length}\n`;
-    modifications = true;
-  }
-
-  if (options.minimum_rating) {
-    queryParams.push(options.minimum_rating);
-    queryString += `  ${checkModifications(modifications)} cost_per_night < $${queryParams.length}\n`;
+    queryString += `${checkModifications(modifications)} cost_per_night <= $${queryParams.length}\n`;
     modifications = true;
   }
 
   if (options.city) {
     const target_city = `%${options.city}%`;
     queryParams.push(target_city);
-    queryString += `  ${checkModifications(modifications)} city like $${queryParams.length}\n`;
+    queryString += `${checkModifications(modifications)} city like $${queryParams.length}\n`;
     modifications = true;
   }
-
-
   
   // END DYNAMIC QUERY
   queryParams.push(limit);
-  queryString += `  GROUP BY properties.id\n  LIMIT $${queryParams.length};`;
+  queryString += `GROUP BY properties.id\n`;
+
+  // HAVING clause must be after group by
+  // if (options.minimum_rating) {
+  //   queryParams.push(options.minimum_rating);
+  //   queryString += `HAVING AVG(property_reviews.rating) >= $${queryParams.length}\n`;
+  // }
+
+  queryString += `LIMIT $${queryParams.length};`;
   
   printQuery(queryString, queryParams);
-  // console.log(`query:\n'${queryString}'\nParams: ${queryParams}`);
   limit = 10;
   return pool.query(queryString, queryParams)
   .then((res) => {
