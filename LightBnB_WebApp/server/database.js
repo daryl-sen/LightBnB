@@ -114,7 +114,7 @@ const printQuery = function(queryString, queryParams) {
   let newString = queryString;
   let varCount = 0;
   while (newString.includes('$')) {
-    console.log('running');
+    // console.log('running');
     varCount++;
     if (typeof(queryParams[varCount - 1]) === 'number') {
       newString = newString.replace(`$${varCount}`, queryParams[varCount - 1]);
@@ -162,22 +162,22 @@ const getAllProperties = function(options, limit = 10) {
   }
   
   // END DYNAMIC QUERY
-  queryParams.push(limit);
   queryString += `GROUP BY properties.id\n`;
 
   // HAVING clause must be after group by
-  // if (options.minimum_rating) {
-  //   queryParams.push(options.minimum_rating);
-  //   queryString += `HAVING AVG(property_reviews.rating) >= $${queryParams.length}\n`;
-  // }
+  if (options.minimum_rating) {
+    queryParams.push(options.minimum_rating);
+    queryString += `HAVING AVG(property_reviews.rating) >= $${queryParams.length}\n`;
+  }
 
+  limit = 10;
+  queryParams.push(limit);
   queryString += `LIMIT $${queryParams.length};`;
   
   printQuery(queryString, queryParams);
-  limit = 10;
+  
   return pool.query(queryString, queryParams)
   .then((res) => {
-    console.log(`count: ${res.rowCount}\n`);
     return res.rows;
   });
 }
